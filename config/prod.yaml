@@ -1,0 +1,15 @@
+env: "dev"
+http_server:
+  address: "0.0.0.0:8082"
+  timeout: 4s
+  idle_timeout: 60s
+db:
+  host: "postgres_db"
+  port: 5432
+  user: "postgres"
+  password: "postgres"
+  name: "postgres"
+  sslmode: "disable"
+  max_attempts: 5
+  delay: 5s
+  migrations_path: "/migrations"

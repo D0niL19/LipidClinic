@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres
+    command: ["/app"]
+
+
+  postgres:
+    image: postgres:16
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "postgres"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+volumes:
+  postgres_data:
