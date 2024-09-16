@@ -17,6 +17,6 @@ COPY --from=builder /usr/local/src/bin/app /
 COPY --from=builder /usr/local/src/internal/storage/postgres/migrations /migrations
 COPY config/prod.yaml /prod.yaml
 ENV CONFIG_PATH=/prod.yaml
-EXPOSE 8082
+EXPOSE 8000
 
 CMD ["/app"]
