@@ -11,6 +11,9 @@ type Config struct {
 	Env        string `yaml:"env" env-default:"local"`
 	HttpServer `yaml:"http_server"`
 	DB         `yaml:"db"`
+	//Redis      `yaml:"redis"`
+	Smtp `yaml:"smtp"`
+	Jwt  `yaml:"jwt"`
 }
 
 type HttpServer struct {
@@ -29,6 +32,26 @@ type DB struct {
 	MaxAttempts    int           `yaml:"max_attempts" env-default:"5"`
 	Delay          time.Duration `yaml:"delay" env-default:"5s"`
 	MigrationsPath string        `yaml:"migrations_path" env-default:"migrations"`
+}
+
+//type Redis struct {
+//	Host          string        `yaml:"host" env-default:"localhost"`
+//	Port          int           `yaml:"port" env-default:"6379"`
+//	UserExpire    time.Duration `yaml:"user_expire" env-default:"3600s"`
+//	SessionExpire time.Duration `yaml:"session_expire" env-default:"3600s"`
+//}
+
+type Smtp struct {
+	Source   string `yaml:"source"`
+	Password string `yaml:"password"`
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+}
+
+type Jwt struct {
+	Secret  string        `yaml:"secret"`
+	Access  time.Duration `yaml:"access_duration"`
+	Refresh time.Duration `yaml:"refresh_duration"`
 }
 
 func MustLoad() *Config {

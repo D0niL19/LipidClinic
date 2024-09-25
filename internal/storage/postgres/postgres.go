@@ -53,12 +53,12 @@ func New(cfg *config.Config) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) AddUser(user *models.User) error {
-	const op = "storage.postgres.AddUser"
+func (s *Storage) AddTempUser(tempUser *models.TempUser) error {
+	const op = "storage.postgres.NewAddTempUser"
 
-	q := `INSERT INTO users (first_name, last_name, date_of_birth, gender, blood_type) VALUES ($1, $2, $3, $4, $5)`
+	q := `INSERT INTO temp_users (email, hashed_password, token, created_at) VALUES ($1, $2, $3, $4)`
 
-	_, err := s.db.Exec(q, user.FirstName, user.LastName, user.DateOfBirth, user.Gender, user.BloodType)
+	_, err := s.db.Exec(q, tempUser.Email, tempUser.HashedPassword, tempUser.Token, time.Now().UTC())
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
@@ -71,42 +71,18 @@ func (s *Storage) AddUser(user *models.User) error {
 	return nil
 }
 
-func (s *Storage) DeleteUser(id int) error {
-	const op = "storage.postgres.DeleteUser"
+func (s *Storage) TempUserByEmail(email string) (*models.TempUser, error) {
+	const op = "storage.postgres.TempUserByEmail"
 
-	q := `DELETE FROM users WHERE id = $1`
-	result, err := s.db.Exec(q, id)
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
+	q := `SELECT * FROM temp_users WHERE email = $1`
 
-	// Проверка количества удалённых строк
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("%s: failed to check affected rows: %w", op, err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
-	}
-
-	return nil
-}
-
-func (s *Storage) GetUser(id int) (*models.User, error) {
-	const op = "storage.postgres.GetUser"
-
-	q := `SELECT * FROM users WHERE id = $1`
-	var user models.User
-	err := s.db.QueryRow(q, id).Scan(
+	var user models.TempUser
+	err := s.db.QueryRow(q, email).Scan(
 		&user.Id,
-		&user.FirstName,
-		&user.LastName,
-		&user.DateOfBirth,
-		&user.Gender,
-		&user.BloodType,
+		&user.Email,
+		&user.HashedPassword,
+		&user.Token,
 		&user.CreatedAt,
-		&user.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -116,4 +92,140 @@ func (s *Storage) GetUser(id int) (*models.User, error) {
 	}
 
 	return &user, nil
+
+}
+
+func (s *Storage) UpdateTempUser(tempUser *models.TempUser) error {
+	const op = "storage.postgres.UpdateTempUser"
+	q := `UPDATE temp_users SET token=$1, created_at=$2 WHERE email=$3`
+
+	res, err := s.db.Exec(q, tempUser.Token, time.Now().UTC(), tempUser.Email)
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+	}
+
+	return nil
+}
+
+func (s *Storage) DeleteTempUser(id int64) error {
+	const op = "storage.postgres.DeleteTempUser"
+
+	q := `DELETE FROM temp_users WHERE id = $1`
+	_, err := s.db.Exec(q, id)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+}
+
+func (s *Storage) AddUser(user *models.User) error {
+	const op = "storage.postgres.AddUser"
+
+	q := `INSERT INTO users (email, password, role) VALUES ($1, $2, $3)`
+
+	_, err := s.db.Exec(q, user.Email, user.HashedPassword, user.Role)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrUserExists)
+		}
+
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+func (s *Storage) UserByEmail(email string) (*models.User, error) {
+	const op = "storage.postgres.NewUserByEmail"
+
+	q := `SELECT * FROM users WHERE email = $1`
+
+	var user models.User
+	err := s.db.QueryRow(q, email).Scan(
+		&user.Id,
+		&user.Email,
+		&user.HashedPassword,
+		&user.Role,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return &user, nil
+}
+
+func (s *Storage) AddPatient(patient *models.Patient) error {
+	const op = "storage.postgres.AddPatient"
+
+	q := `INSERT INTO patients (
+		date_of_baseline_visit, 
+		age_visit_baseline, 
+		hypertension_baseline, 
+		diabetes_baseline, 
+		smoking_status_baseline, 
+		cvd_baseline, 
+		cad_baseline, 
+		mi_baseline, 
+		cad_revascularization_baseline, 
+		stroke_baseline, 
+		stroke_premature_baseline, 
+		liver_steatosis_baseline, 
+		xanthelasma, 
+		weight_baseline, 
+		height_baseline, 
+		thyroid_disease, 
+		menarche_reached_baseline, 
+		age_at_menarche_baseline, 
+		menopause_reached_baseline
+	) VALUES (
+		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+	)`
+
+	_, err := s.db.Exec(q,
+		patient.DateOfBaselineVisit,
+		patient.AgeVisitBaseline,
+		patient.HypertensionBaseline,
+		patient.DiabetesBaseline,
+		patient.SmokingStatusBaseline,
+		patient.CVDBaseline,
+		patient.CADBaseline,
+		patient.MIBaseline,
+		patient.CADRevascularization,
+		patient.StrokeBaseline,
+		patient.StrokePremature,
+		patient.LiverSteatosisBaseline,
+		patient.Xanthelasma,
+		patient.WeightBaseline,
+		patient.HeightBaseline,
+		patient.ThyroidDisease,
+		patient.MenarcheBaseline,
+		patient.AgeMenarche,
+		patient.MenopauseBaseline,
+	)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrUserExists)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
 }

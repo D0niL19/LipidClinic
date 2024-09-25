@@ -1,4 +1,4 @@
-package add
+package user
 
 import (
 	"LipidClinic/internal/lib/logger/sl"
@@ -9,14 +9,13 @@ import (
 	"net/http"
 )
 
-//go:generate go run github.com/vektra/mockery/v2@v2.45.1 --name=UserAdder
 type UserAdder interface {
 	AddUser(user *models.User) error
 }
 
-func New(log *slog.Logger, userAdder UserAdder) gin.HandlerFunc {
+func Add(log *slog.Logger, userAdder UserAdder) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		const op = "handlers.user.add.New"
+		const op = "handlers.user.add"
 
 		log := log.With(
 			slog.String("op", op),

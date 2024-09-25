@@ -2,10 +2,10 @@ package main
 
 import (
 	"LipidClinic/internal/config"
-	"LipidClinic/internal/http-server/handlers/user/add"
-	del "LipidClinic/internal/http-server/handlers/user/delete"
-	"LipidClinic/internal/http-server/handlers/user/get"
+	"LipidClinic/internal/http-server/handlers/auth"
+	"LipidClinic/internal/http-server/handlers/patient"
 	"LipidClinic/internal/lib/logger/sl"
+	"LipidClinic/internal/middleware"
 	"LipidClinic/internal/storage/postgres"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
@@ -29,6 +29,7 @@ func main() {
 	log.Debug("Debug messages are enabled")
 
 	storage, err := postgres.New(cfg)
+	//rdb, err := red.New(cfg)
 	if err != nil {
 		log.Error("failed to init storage", sl.Err(err))
 		panic(err)
@@ -40,9 +41,17 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(requestid.New())
 
-	router.POST("/users", add.New(log, storage))
-	router.GET("/users/:id", get.New(log, storage))
-	router.DELETE("/users/:id", del.New(log, storage))
+	router.POST("/auth/register", auth.Register(log, storage, cfg))
+	router.POST("/auth/sign-in", auth.SignIn(log, storage, cfg))
+	//router.POST("/auth/sign-out", SignOut)
+
+	router.POST("/auth/confirm-account/:email/:token", auth.ConfirmAccount(log, storage))
+	//router.POST("/auth/reset-password", auth.ForgetPassword())
+	//router.POST("/auth/change-password/:email/:code", ChangePassword)
+
+	protected := router.Group("/patients")
+	protected.Use(middleware.AuthMiddleware(cfg.Jwt.Secret, log))
+	protected.POST("/", patient.Add(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 

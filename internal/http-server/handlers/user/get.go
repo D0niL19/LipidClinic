@@ -1,7 +1,8 @@
-package delete
+package user
 
 import (
 	"LipidClinic/internal/lib/logger/sl"
+	"LipidClinic/internal/models"
 	"LipidClinic/internal/storage"
 	"errors"
 	"github.com/gin-contrib/requestid"
@@ -11,13 +12,13 @@ import (
 	"strconv"
 )
 
-type UserDeleter interface {
-	DeleteUser(id int) error
+type UserGetter interface {
+	GetUser(id int) (*models.User, error)
 }
 
-func New(log *slog.Logger, userDeleter UserDeleter) gin.HandlerFunc {
+func Get(log *slog.Logger, userGetter UserGetter) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		const op = "handlers.user.delete"
+		const op = "handlers.user.get.New"
 
 		log := log.With(
 			slog.String("op", op),
@@ -33,7 +34,7 @@ func New(log *slog.Logger, userDeleter UserDeleter) gin.HandlerFunc {
 			return
 		}
 
-		err := userDeleter.DeleteUser(idInt)
+		user, err := userGetter.GetUser(idInt)
 		if err != nil {
 			if errors.Is(err, storage.ErrUserNotFound) {
 				log.Info("user not found")
@@ -42,9 +43,9 @@ func New(log *slog.Logger, userDeleter UserDeleter) gin.HandlerFunc {
 			}
 			log.Error("failed to get user", sl.Err(err))
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
+			return
 		}
-		log.Info("user deleted", slog.String("id", id))
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-
+		log.Info("User successfully got")
+		c.JSON(http.StatusOK, user)
 	}
 }
