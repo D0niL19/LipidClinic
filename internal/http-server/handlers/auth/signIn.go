@@ -55,13 +55,13 @@ func SignIn(log *slog.Logger, userGetter UserGetter, cfg *config.Config) gin.Han
 			return
 		}
 
-		accessToken, err := jwt.NewToken(userdb, cfg.Jwt.Access, cfg.Jwt.Secret)
+		accessToken, err := jwt.NewToken(userdb.Id, userdb.Email, cfg.Jwt.Access, cfg.Jwt.Secret)
 		if err != nil {
 			log.Error("failed to generate token", sl.Err(err))
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
 			return
 		}
-		refreshToken, err := jwt.NewToken(userdb, cfg.Jwt.Refresh, cfg.Jwt.Secret)
+		refreshToken, err := jwt.NewToken(userdb.Id, userdb.Email, cfg.Jwt.Refresh, cfg.Jwt.Secret)
 		if err != nil {
 			log.Error("failed to generate token", sl.Err(err))
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})

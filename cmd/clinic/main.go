@@ -4,6 +4,7 @@ import (
 	"LipidClinic/internal/config"
 	"LipidClinic/internal/http-server/handlers/auth"
 	"LipidClinic/internal/http-server/handlers/patient"
+	"LipidClinic/internal/http-server/handlers/relations"
 	"LipidClinic/internal/lib/logger/sl"
 	"LipidClinic/internal/middleware"
 	"LipidClinic/internal/storage/postgres"
@@ -43,15 +44,20 @@ func main() {
 
 	router.POST("/auth/register", auth.Register(log, storage, cfg))
 	router.POST("/auth/sign-in", auth.SignIn(log, storage, cfg))
-	//router.POST("/auth/sign-out", SignOut)
+	router.POST("/auth/refresh", auth.Refresh(log, cfg))
 
 	router.POST("/auth/confirm-account/:email/:token", auth.ConfirmAccount(log, storage))
-	//router.POST("/auth/reset-password", auth.ForgetPassword())
-	//router.POST("/auth/change-password/:email/:code", ChangePassword)
+	router.POST("/auth/reset-password", auth.ForgetPassword(log, storage, cfg))
+	router.POST("/auth/change-password/:token", auth.ChangePassword(log, storage, cfg))
 
-	protected := router.Group("/patients")
-	protected.Use(middleware.AuthMiddleware(cfg.Jwt.Secret, log))
-	protected.POST("/", patient.Add(log, storage))
+	patients := router.Group("/patients")
+	patients.Use(middleware.AuthMiddleware(cfg.Jwt.Secret, log))
+	patients.POST("/", patient.Add(log, storage))
+	patients.GET("/:id", patient.GetByEmail(log, storage))
+
+	relationships := router.Group("/relationships")
+	relationships.Use(middleware.AuthMiddleware(cfg.Jwt.Secret, log))
+	relationships.POST("/", relations.Add(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 

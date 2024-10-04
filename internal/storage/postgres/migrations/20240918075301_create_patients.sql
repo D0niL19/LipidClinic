@@ -1,7 +1,11 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS patients (
+CREATE TABLE patients (
     id SERIAL PRIMARY KEY,
+    name varchar(50),
+    surname varchar(50),
+    birth_date DATE,
+    email VARCHAR(50) UNIQUE ,
     date_of_baseline_visit DATE,
     age_visit_baseline INT,
     hypertension_baseline BOOLEAN,

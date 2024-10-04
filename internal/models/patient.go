@@ -2,6 +2,10 @@ package models
 
 type Patient struct {
 	ID                     int     `json:"id"`
+	Name                   string  `json:"name"`
+	Surname                string  `json:"surname"`
+	BirthDate              string  `json:"birth_date"`
+	Email                  string  `json:"email"`
 	DateOfBaselineVisit    string  `json:"date_of_baseline_visit"`
 	AgeVisitBaseline       int     `json:"age_visit_baseline"`
 	HypertensionBaseline   bool    `json:"hypertension_baseline"`

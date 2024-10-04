@@ -1,4 +1,4 @@
-package patient
+package relations
 
 import (
 	"LipidClinic/internal/lib/logger/sl"
@@ -10,21 +10,21 @@ import (
 	"net/http"
 )
 
-type PatientAdder interface {
-	AddPatient(patient *models.Patient) error
+type RelationAdder interface {
+	AddRelation(relation *models.Relation) error
 }
 
-func Add(log *slog.Logger, patientAdder PatientAdder) gin.HandlerFunc {
+func Add(log *slog.Logger, relationtAdder RelationAdder) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		const op = "handlers.patient.add"
+		const op = "handlers.relations.add"
 
 		log := log.With(
 			slog.String("op", op),
 			slog.String("request_id", c.GetString("request_id")),
 		)
 
-		var patient *models.Patient
-		if err := c.ShouldBindJSON(&patient); err != nil {
+		var relation *models.Relation
+		if err := c.ShouldBindJSON(&relation); err != nil {
 			log.Error("can not bind to json", sl.Err(err))
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
 				"error":   err.Error(),
@@ -33,9 +33,9 @@ func Add(log *slog.Logger, patientAdder PatientAdder) gin.HandlerFunc {
 			return
 		}
 
-		if err := patientAdder.AddPatient(patient); err != nil {
-			if errors.Is(err, storage.ErrPatientExists) {
-				log.Error("patient already exists", sl.Err(err))
+		if err := relationtAdder.AddRelation(relation); err != nil {
+			if errors.Is(err, storage.ErrRelationExists) {
+				log.Error("relation already exists", sl.Err(err))
 				c.AbortWithStatusJSON(http.StatusConflict, gin.H{})
 				return
 			}

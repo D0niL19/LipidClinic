@@ -171,10 +171,30 @@ func (s *Storage) UserByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
+func (s *Storage) UpdatePasswordUser(id int64, password string) error {
+	const op = "storage.postgres.ChangePasswordUser"
+
+	q := `UPDATE users SET password = $1 WHERE id = $2`
+
+	_, err := s.db.Exec(q, password, id)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+}
+
 func (s *Storage) AddPatient(patient *models.Patient) error {
 	const op = "storage.postgres.AddPatient"
 
 	q := `INSERT INTO patients (
+		name, 
+		surname, 
+		birth_date,
+        email,
 		date_of_baseline_visit, 
 		age_visit_baseline, 
 		hypertension_baseline, 
@@ -195,10 +215,14 @@ func (s *Storage) AddPatient(patient *models.Patient) error {
 		age_at_menarche_baseline, 
 		menopause_reached_baseline
 	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19
+		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
 	)`
 
 	_, err := s.db.Exec(q,
+		patient.Name,
+		patient.Surname,
+		patient.BirthDate,
+		patient.Email,
 		patient.DateOfBaselineVisit,
 		patient.AgeVisitBaseline,
 		patient.HypertensionBaseline,
@@ -222,10 +246,41 @@ func (s *Storage) AddPatient(patient *models.Patient) error {
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
-			return fmt.Errorf("%s: %w", op, storage.ErrUserExists)
+			return fmt.Errorf("%s: %w", op, storage.ErrPatientExists)
 		}
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
+}
+
+func (s *Storage) PatientByEmail(email string) (*models.Patient, error) {
+	const op = "storage.postgres.PatientByEmail"
+
+	q := `SELECT * FROM patients WHERE email = $1`
+
+	var patient models.Patient
+
+	row := s.db.QueryRow(q, email).Scan(patient)
+	if row == nil {
+		return nil, fmt.Errorf("%s: %w", op, storage.ErrPatientNotFound)
+	}
+
+	return &patient, nil
+}
+
+func (s *Storage) AddRelation(relation *models.Relation) error {
+	const op = "storage.postgres.AddRelation"
+
+	q := `INSERT INTO relatives (patient_id, relative_id, relationship_type, created_at) VALUES ($1, $2, $3, $4)`
+	_, err := s.db.Exec(q, relation.PatientID, relation.RelativeID, relation.RelationshipType, time.Now().UTC())
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrRelationExists)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
+
 }

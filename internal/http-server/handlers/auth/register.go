@@ -96,8 +96,8 @@ func Register(log *slog.Logger, tempUserAdder TempUserAdder, cfg *config.Config)
 			c.JSON(http.StatusInternalServerError, gin.H{})
 			return
 		}
-		log.Info("email sent")
+		log.Info("register email sent")
 
-		c.JSON(http.StatusOK, gin.H{})
+		c.Status(http.StatusOK)
 	}
 }

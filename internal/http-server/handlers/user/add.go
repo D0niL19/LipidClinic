@@ -3,6 +3,8 @@ package user
 import (
 	"LipidClinic/internal/lib/logger/sl"
 	"LipidClinic/internal/models"
+	"LipidClinic/internal/storage"
+	"errors"
 	"github.com/gin-contrib/requestid"
 	"github.com/gin-gonic/gin"
 	"log/slog"
@@ -33,6 +35,11 @@ func Add(log *slog.Logger, userAdder UserAdder) gin.HandlerFunc {
 		}
 
 		if err := userAdder.AddUser(user); err != nil {
+			if errors.Is(err, storage.ErrUserExists) {
+				log.Error("user already exists", sl.Err(err))
+				c.AbortWithStatusJSON(http.StatusConflict, gin.H{})
+				return
+			}
 			log.Error("failed to add user", sl.Err(err))
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{})
 			return

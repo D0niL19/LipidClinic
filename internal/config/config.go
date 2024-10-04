@@ -42,10 +42,11 @@ type DB struct {
 //}
 
 type Smtp struct {
-	Source   string `yaml:"source"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
+	Source          string        `yaml:"source"`
+	Password        string        `yaml:"password"`
+	Host            string        `yaml:"host"`
+	Port            string        `yaml:"port"`
+	TokenExpiration time.Duration `yaml:"token_expiration" env-default:"1h"`
 }
 
 type Jwt struct {
