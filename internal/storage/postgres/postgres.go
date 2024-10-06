@@ -14,6 +14,18 @@ import (
 	"time"
 )
 
+var reverseRelationships = map[string]string{
+	"grandmother": "grandson",
+	"grandson":    "grandmother",
+	"mother":      "child",
+	"child":       "parent",
+	"father":      "child",
+	"daughter":    "parent",
+	"son":         "parent",
+	"brother":     "sibling",
+	"sister":      "sibling",
+}
+
 type Storage struct {
 	db *sql.DB
 }
@@ -261,12 +273,98 @@ func (s *Storage) PatientByEmail(email string) (*models.Patient, error) {
 
 	var patient models.Patient
 
-	row := s.db.QueryRow(q, email).Scan(patient)
-	if row == nil {
-		return nil, fmt.Errorf("%s: %w", op, storage.ErrPatientNotFound)
+	err := s.db.QueryRow(q, email).Scan(
+		&patient.ID,
+		&patient.Name,
+		&patient.Surname,
+		&patient.BirthDate,
+		&patient.Email,
+		&patient.DateOfBaselineVisit,
+		&patient.AgeVisitBaseline,
+		&patient.HypertensionBaseline,
+		&patient.DiabetesBaseline,
+		&patient.SmokingStatusBaseline,
+		&patient.CVDBaseline,
+		&patient.CADBaseline,
+		&patient.MIBaseline,
+		&patient.CADRevascularization,
+		&patient.StrokeBaseline,
+		&patient.StrokePremature,
+		&patient.LiverSteatosisBaseline,
+		&patient.Xanthelasma,
+		&patient.WeightBaseline,
+		&patient.HeightBaseline,
+		&patient.ThyroidDisease,
+		&patient.MenarcheBaseline,
+		&patient.AgeMenarche,
+		&patient.MenopauseBaseline,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrPatientNotFound)
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
 	return &patient, nil
+}
+
+func (s *Storage) PatientById(id int64) (*models.Patient, error) {
+	const op = "storage.postgres.PatientByEmail"
+
+	q := `SELECT * FROM patients WHERE id = $1`
+
+	var patient models.Patient
+
+	err := s.db.QueryRow(q, id).Scan(
+		&patient.ID,
+		&patient.Name,
+		&patient.Surname,
+		&patient.BirthDate,
+		&patient.Email,
+		&patient.DateOfBaselineVisit,
+		&patient.AgeVisitBaseline,
+		&patient.HypertensionBaseline,
+		&patient.DiabetesBaseline,
+		&patient.SmokingStatusBaseline,
+		&patient.CVDBaseline,
+		&patient.CADBaseline,
+		&patient.MIBaseline,
+		&patient.CADRevascularization,
+		&patient.StrokeBaseline,
+		&patient.StrokePremature,
+		&patient.LiverSteatosisBaseline,
+		&patient.Xanthelasma,
+		&patient.WeightBaseline,
+		&patient.HeightBaseline,
+		&patient.ThyroidDisease,
+		&patient.MenarcheBaseline,
+		&patient.AgeMenarche,
+		&patient.MenopauseBaseline,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrPatientNotFound)
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return &patient, nil
+}
+
+func (s *Storage) DeletePatient(id int64) error {
+	const op = "storage.postgres.DeletePatient"
+
+	q := `DELETE FROM patients WHERE id = $1`
+	_, err := s.db.Exec(q, id)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrUserNotFound)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }
 
 func (s *Storage) AddRelation(relation *models.Relation) error {
@@ -282,5 +380,80 @@ func (s *Storage) AddRelation(relation *models.Relation) error {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	return nil
+}
 
+func (s *Storage) Relation(id int64) (*models.Relation, error) {
+	const op = "storage.postgres.Relation"
+
+	q := `SELECT * FROM relatives WHERE id = $1`
+
+	var relation models.Relation
+	err := s.db.QueryRow(q, id).Scan(
+		&relation.ID,
+		&relation.PatientID,
+		&relation.RelativeID,
+		&relation.RelationshipType,
+		&relation.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("%s: %w", op, storage.ErrRelationNotFound)
+		}
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return &relation, nil
+}
+
+func (s *Storage) AllRelations(patientID int64) ([]models.Relation, error) {
+	const op = "storage.postgres.AllRelations"
+
+	q := `SELECT id, patient_id, relative_id, relationship_type
+		  FROM relatives
+		  WHERE patient_id = $1 OR relative_id = $1`
+
+	rows, err := s.db.Query(q, patientID)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	var relations []models.Relation
+	for rows.Next() {
+		var relation models.Relation
+		if err := rows.Scan(&relation.ID, &relation.PatientID, &relation.RelativeID, &relation.RelationshipType); err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+
+		// Проверяем, если patientID совпадает с RelativeID, меняем их местами и тип связи
+		if relation.RelativeID == patientID {
+			relation.PatientID, relation.RelativeID = relation.RelativeID, relation.PatientID
+			if reverseType, exists := reverseRelationships[relation.RelationshipType]; exists {
+				relation.RelationshipType = reverseType
+			}
+		}
+
+		relations = append(relations, relation)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return relations, nil
+}
+
+func (s *Storage) DeleteRelation(patId, relId int64) error {
+	const op = "storage.postgres.DeletePatient"
+
+	q := `DELETE FROM relatives WHERE patient_id = $1 AND relative_id = $2`
+	_, err := s.db.Exec(q, patId, relId)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return fmt.Errorf("%s: %w", op, storage.ErrRelationNotFound)
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+	return nil
 }

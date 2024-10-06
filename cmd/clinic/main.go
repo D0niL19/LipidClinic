@@ -15,6 +15,17 @@ import (
 	"os"
 )
 
+// @title Lipid Clinic App
+// @version 1.0
+// @description API Server for Lipid detection
+
+// @host localhost:8080
+// @BasePath /
+
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
+
 const (
 	envLocal = "local"
 	envDev   = "dev"
@@ -53,11 +64,16 @@ func main() {
 	patients := router.Group("/patients")
 	patients.Use(middleware.AuthMiddleware(cfg.Jwt.Secret, log))
 	patients.POST("/", patient.Add(log, storage))
-	patients.GET("/:id", patient.GetByEmail(log, storage))
+	patients.GET("/", patient.ByEmail(log, storage))
+	patients.GET("/:id", patient.ById(log, storage))
+	patients.DELETE("/:id", patient.Delete(log, storage))
 
 	relationships := router.Group("/relationships")
 	relationships.Use(middleware.AuthMiddleware(cfg.Jwt.Secret, log))
 	relationships.POST("/", relations.Add(log, storage))
+	relationships.GET("/:id", relations.ById(log, storage))
+	relationships.GET("/all/:id", relations.AllById(log, storage))
+	relationships.DELETE("/", relations.Delete(log, storage))
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 

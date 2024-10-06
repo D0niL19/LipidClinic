@@ -72,7 +72,7 @@ func SignIn(log *slog.Logger, userGetter UserGetter, cfg *config.Config) gin.Han
 			"refresh_token",
 			refreshToken,
 			int(cfg.Jwt.Refresh.Seconds()),
-			"/",
+			"/auth",
 			cfg.HttpServer.Address,
 			false,
 			true,

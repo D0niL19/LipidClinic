@@ -12,7 +12,7 @@ import (
 )
 
 type PatientDeleter interface {
-	DeletePatient(id int) error
+	DeletePatient(id int64) error
 }
 
 func Delete(log *slog.Logger, patientDeleter PatientDeleter) gin.HandlerFunc {
@@ -33,7 +33,7 @@ func Delete(log *slog.Logger, patientDeleter PatientDeleter) gin.HandlerFunc {
 			return
 		}
 
-		err := patientDeleter.DeletePatient(idInt)
+		err := patientDeleter.DeletePatient(int64(idInt))
 		if err != nil {
 			if errors.Is(err, storage.ErrUserNotFound) {
 				log.Info("user not found")
