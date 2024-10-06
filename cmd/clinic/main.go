@@ -44,6 +44,15 @@ func main() {
 	router.Use(gin.Logger())
 	router.Use(requestid.New())
 
+	router.Use(func(c *gin.Context) {
+		corsSettings.HandlerFunc(c.Writer, c.Request)
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusOK)
+			return
+		}
+		c.Next()
+	})
+
 	router.POST("/auth/register", auth.Register(log, storage, cfg))
 	router.POST("/auth/sign-in", auth.SignIn(log, storage, cfg))
 	router.POST("/auth/refresh", auth.Refresh(log, cfg))
@@ -68,10 +77,9 @@ func main() {
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
-	routerWithCors := corsSettings.Handler(router)
 	server := &http.Server{
 		Addr:         cfg.Address,
-		Handler:      routerWithCors,
+		Handler:      router,
 		WriteTimeout: cfg.Timeout,
 		ReadTimeout:  cfg.Timeout,
 		IdleTimeout:  cfg.IdleTimeout,
