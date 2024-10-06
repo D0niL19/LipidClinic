@@ -5,6 +5,7 @@ import (
 	"LipidClinic/internal/http-server/handlers/auth"
 	"LipidClinic/internal/http-server/handlers/patient"
 	"LipidClinic/internal/http-server/handlers/relations"
+	"LipidClinic/internal/lib/cors"
 	"LipidClinic/internal/lib/logger/sl"
 	"LipidClinic/internal/middleware"
 	"LipidClinic/internal/storage/postgres"
@@ -15,17 +16,6 @@ import (
 	"os"
 )
 
-// @title Lipid Clinic App
-// @version 1.0
-// @description API Server for Lipid detection
-
-// @host localhost:8080
-// @BasePath /
-
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
-
 const (
 	envLocal = "local"
 	envDev   = "dev"
@@ -34,6 +24,7 @@ const (
 
 func main() {
 	cfg := config.MustLoad()
+	corsSettings := cors.CorsSettings()
 
 	log := setupLogger(cfg.Env)
 
@@ -77,9 +68,10 @@ func main() {
 
 	log.Info("starting server", slog.String("address", cfg.Address))
 
+	routerWithCors := corsSettings.Handler(router)
 	server := &http.Server{
 		Addr:         cfg.Address,
-		Handler:      router,
+		Handler:      routerWithCors,
 		WriteTimeout: cfg.Timeout,
 		ReadTimeout:  cfg.Timeout,
 		IdleTimeout:  cfg.IdleTimeout,
