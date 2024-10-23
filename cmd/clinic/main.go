@@ -23,6 +23,7 @@ const (
 )
 
 func main() {
+
 	cfg := config.MustLoad()
 	corsSettings := cors.CorsSettings()
 
@@ -66,6 +67,7 @@ func main() {
 	patients.POST("/", patient.Add(log, storage))
 	patients.GET("/", patient.ByEmail(log, storage))
 	patients.GET("/:id", patient.ById(log, storage))
+	patients.GET("/all", patient.All(log, storage))
 	patients.DELETE("/:id", patient.Delete(log, storage))
 
 	relationships := router.Group("/relationships")

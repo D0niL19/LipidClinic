@@ -352,6 +352,61 @@ func (s *Storage) PatientById(id int64) (*models.Patient, error) {
 	return &patient, nil
 }
 
+func (s *Storage) PatientsAll() ([]*models.Patient, error) {
+	const op = "storage.postgres.AllPatients"
+
+	q := `SELECT * FROM patients`
+
+	rows, err := s.db.Query(q)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	defer rows.Close()
+
+	var patients []*models.Patient
+
+	for rows.Next() {
+		var patient models.Patient
+		err := rows.Scan(
+			&patient.ID,
+			&patient.Name,
+			&patient.Surname,
+			&patient.BirthDate,
+			&patient.Email,
+			&patient.DateOfBaselineVisit,
+			&patient.AgeVisitBaseline,
+			&patient.HypertensionBaseline,
+			&patient.DiabetesBaseline,
+			&patient.SmokingStatusBaseline,
+			&patient.CVDBaseline,
+			&patient.CADBaseline,
+			&patient.MIBaseline,
+			&patient.CADRevascularization,
+			&patient.StrokeBaseline,
+			&patient.StrokePremature,
+			&patient.LiverSteatosisBaseline,
+			&patient.Xanthelasma,
+			&patient.WeightBaseline,
+			&patient.HeightBaseline,
+			&patient.ThyroidDisease,
+			&patient.MenarcheBaseline,
+			&patient.AgeMenarche,
+			&patient.MenopauseBaseline,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+		patients = append(patients, &patient)
+	}
+
+	// Check for errors during iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return patients, nil
+}
+
 func (s *Storage) DeletePatient(id int64) error {
 	const op = "storage.postgres.DeletePatient"
 
